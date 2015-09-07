@@ -1,6 +1,6 @@
 /*
 -----------------------------------------------------------------------------
-Filename:    TutorialApplication.cpp
+Filename:    PlanetScapeApplication.cpp
 -----------------------------------------------------------------------------
 
 This source file is part of the
@@ -15,7 +15,7 @@ http://www.ogre3d.org/wiki/
 -----------------------------------------------------------------------------
 */
 
-#include "TutorialApplication.h"
+#include "PlanetScapeApplication.h"
 #include <OgreTextureManager.h>
 #include <OgreMaterialManager.h>
 #include <OgreMaterial.h>
@@ -28,59 +28,21 @@ http://www.ogre3d.org/wiki/
 #include <OgreHighLevelGpuProgramManager.h>
 #include <OgreHighLevelGpuProgram.h>
 
+#include "rapidjson/document.h"
+
 using namespace Ogre;
 
-static const String test_glsl_vp = "uniform mat4 worldViewProj;\n\
-varying vec3 vertexPos;\n\
-varying vec2 outUV;\n\
-void main()\n\
-{\n\
-gl_Position = worldViewProj * gl_Vertex;\n\
-outUV = gl_MultiTexCoord0.xy;\n\
-vertexPos = normalize(gl_Vertex.xyz);\n\
-}";
-
-static const String test_glsl_fp = "uniform samplerCube cubemapTexture;\n\
-   \n\
-   vec4 cubeToLatLon(samplerCube cubemap, vec2 uvCoords)  \n\
-   {  \n\
-      const float PI = 3.141592653589793238462643383;\n\
-      vec3 texCoords;\n\
-      //float rx = (uvCoords.x * 2.0) - 1.0;\n\
-      //float ry = (uvCoords.y * 2.0) - 1.0;\n\
-      float rx = uvCoords.x;\n\
-      float ry = uvCoords.y;\n\
-      //texCoords.x = -cos(rx * PI * 2.0) * cos(ry * PI);\n\
-      //texCoords.y = -sin(ry * PI);\n\
-      //texCoords.z = sin(rx * PI * 2.0) * cos(ry * PI);\n\
-      texCoords.x = -sin(rx * PI * 2.0) * sin(ry * PI);\n\
-      texCoords.y = cos(ry * PI);\n\
-      texCoords.z = -cos(rx * PI * 2.0) * sin(ry * PI); \n\
-      return textureCube(cubemap, texCoords);  \n\
-   }  \n\
-   varying vec3 vertexPos;\n\
-   varying vec2 outUV;\n\
-   \n\
-   void main( void )\n\
-   {\n\
-         //gl_FragColor = textureCube(cubemapTexture,vertexPos);\n\
-         //gl_FragColor.rgb = vertexPos.xyz;\n\
-         //gl_FragColor.r = outUV.x;\n\
-         //gl_FragColor.g = outUV.y;\n\
-         gl_FragColor = cubeToLatLon(cubemapTexture, outUV);\n\
-   }";
-
 //---------------------------------------------------------------------------
-TutorialApplication::TutorialApplication(void)
+PlanetScapeApplication::PlanetScapeApplication(void)
 {
 }
 //---------------------------------------------------------------------------
-TutorialApplication::~TutorialApplication(void)
+PlanetScapeApplication::~PlanetScapeApplication(void)
 {
 }
 
 //---------------------------------------------------------------------------
-void TutorialApplication::createScene(void)
+void PlanetScapeApplication::createScene(void)
 {
    Light *sun = mSceneMgr->createLight("Sun");
    SceneNode *sunNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("SunNode");
@@ -111,11 +73,12 @@ void TutorialApplication::createScene(void)
       ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
       );
 
+   reloadPlanetJson();
    reload();
 
 }
 
-bool TutorialApplication::keyReleased(const OIS::KeyEvent &arg)
+bool PlanetScapeApplication::keyReleased(const OIS::KeyEvent &arg)
 {
    if (arg.key == OIS::KC_L) {
       reload();
@@ -125,7 +88,37 @@ bool TutorialApplication::keyReleased(const OIS::KeyEvent &arg)
    return BaseApplication::keyReleased(arg);
 }
 
-void TutorialApplication::reload()
+void PlanetScapeApplication::reloadPlanetJson()
+{
+   const String filename = "planet1.json";
+   rapidjson::Document json;
+   DataStreamPtr data = ResourceGroupManager::getSingletonPtr()->openResource(filename, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+   if (data.isNull()) {
+      Ogre::LogManager::getSingletonPtr()->logMessage(String("Couldn't find file  ") + filename);
+      return;
+   }
+
+   String jsonString = data->getAsString();
+   json.Parse(jsonString.c_str());
+
+   if (json.HasParseError()) {
+      Ogre::LogManager::getSingletonPtr()->logMessage(String("Parse error discovered in ") + filename);
+      //Ogre::LogManager::getSingletonPtr()->logMessage(String("Parse error: ") + json.GetParseError());
+      data->close();
+      return;
+   }
+
+   if (json.HasMember("name")) {
+      Ogre::LogManager::getSingletonPtr()->logMessage(String("PlanetName: ") + json["name"].GetString());
+   }
+
+   //reloadLand(json["land"]);
+   //reloadWater(json["water"]);
+
+   data->close();
+}
+
+void PlanetScapeApplication::reload()
 {
    const String planetVpName = "planet_glsl_vp";
    const String planetFpName = "planet_glsl_fp";
@@ -229,7 +222,7 @@ extern "C" {
 #endif
     {
         // Create application object
-        TutorialApplication app;
+        PlanetScapeApplication app;
 
         try {
             app.go();

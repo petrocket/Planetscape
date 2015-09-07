@@ -1,6 +1,6 @@
 /*
 -----------------------------------------------------------------------------
-Filename:    TutorialApplication.h
+Filename:    PlanetScapeApplication.h
 -----------------------------------------------------------------------------
 
 This source file is part of the
@@ -15,18 +15,18 @@ http://www.ogre3d.org/wiki/
 -----------------------------------------------------------------------------
 */
 
-#ifndef __TutorialApplication_h_
-#define __TutorialApplication_h_
+#ifndef __PlanetScapeApplication_h_
+#define __PlanetScapeApplication_h_
 
 #include "BaseApplication.h"
 
 //---------------------------------------------------------------------------
 
-class TutorialApplication : public BaseApplication
+class PlanetScapeApplication : public BaseApplication
 {
 public:
-    TutorialApplication(void);
-    virtual ~TutorialApplication(void);
+    PlanetScapeApplication(void);
+    virtual ~PlanetScapeApplication(void);
 
 protected:
     virtual void createScene(void);
@@ -34,6 +34,8 @@ protected:
     virtual bool keyReleased(const OIS::KeyEvent &arg);
 
     void reload();
+    void reloadShader();
+    void reloadPlanetJson();
 
     Ogre::Entity *mPlanetEntity;
     Ogre::Entity *mPlaneEntity;
@@ -46,6 +48,6 @@ protected:
 
 //---------------------------------------------------------------------------
 
-#endif // #ifndef __TutorialApplication_h_
+#endif // #ifndef __PlanetScapeApplication_h_
 
 //---------------------------------------------------------------------------

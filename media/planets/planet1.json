@@ -1,0 +1,67 @@
+{
+	"name":"EarthLike",
+
+	"land": {
+		"continents":0,
+		"islands":false,
+		"noise_layers": [
+			{
+				"type":"puffy",
+				"seed":0,
+				"min_height":0.0,
+				"max_height":1.0,
+				"blend":"add"
+			},
+			{
+				"type":"speckled",
+				"seed":0,
+				"min_height":0.0,
+				"max_height":1.0,
+				"blend":"add"
+			},
+			{
+				"type":"turbulence",
+				"seed":0,
+				"min_height":0.0,
+				"max_height":1.0,
+				"blend":"multiply"
+			}
+		],
+		"color_table": [
+			{
+				"offset":0.0,
+				"color":[0.0,0.0,0.0],
+				"dither_amount":0.0
+			},
+			{
+				"offset":1.0,
+				"color":[1.0,1.0,1.0],
+				"dither_amount":0.0
+			}
+		]
+	},
+
+	"cracks": {
+	},
+
+	"craters": {
+	},
+
+	"water": {
+		"level":0.3,
+		"deep_level":0.2,
+		"shallow_color":[0.6,0.7,0.9],
+		"deep_color":[0.0,0.05,0.2],
+		"specular_amount":0.2,
+		"specular_color":[1.0,1.0,1.0]
+	},
+
+	"lava": {
+	},
+
+	"cities": {
+	},
+
+	"clouds": {
+	}
+}
