@@ -1,5 +1,37 @@
-uniform samplerCube cubemapTexture;
-   
+// continents
+uniform int numContinents; 
+uniform float continentSeed; 
+
+// islands
+uniform int numIslands;
+uniform float islandSeed;
+
+// Ogre doesn't support arrays of structures :(
+
+// noise layers
+uniform int noiseLayerTypes[4];
+uniform float noiseLayerSeeds[4];
+uniform float noiseLayerMinHeights[4];
+uniform float noiseLayerMaxHeights[4];
+uniform int noiseLayerBlendTypes[4];
+uniform int numNoiseLayers; // num noise layers actually used
+
+uniform float colorTableOffsets[8];
+uniform float colorTableColors[8 * 3];
+uniform float colorTableDitherAmounts[8];
+uniform int numColorTableEntries; // num color tables entries used
+
+// polar caps (easy out)
+uniform float polarCap;
+
+uniform float waterShallowLevel;
+uniform vec3 waterShallowColor;
+uniform float waterDeepLevel;
+uniform vec3 waterDeepColor;
+uniform float waterSpecularAmount;
+uniform vec3 waterSpecularColor;
+
+
 //
 //	Given an arbitrary 3D point this calculates the 4 vectors from the corners of the simplex pyramid to the point
 //	It also returns the integer grid index information for the corners

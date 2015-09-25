@@ -19,9 +19,9 @@ http://www.ogre3d.org/wiki/
 #define __PlanetScapeApplication_h_
 
 #include "BaseApplication.h"
+#include "rapidjson/document.h"
 
 //---------------------------------------------------------------------------
-
 class PlanetScapeApplication : public BaseApplication
 {
 public:
@@ -44,6 +44,17 @@ protected:
 
     Ogre::SceneNode *mPlanetSceneNode;
     Ogre::SceneNode *mPlaneSceneNode;
+
+private:
+   rapidjson::Document mJson;
+
+   void SetLandParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
+   void SetNoiseLayerParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
+   void SetColorTableParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
+   void SetWaterParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
+
+   int GetNoiseTypeFromString(std::string &val);
+   int GetBlendTypeFromString(std::string &val);
 };
 
 //---------------------------------------------------------------------------

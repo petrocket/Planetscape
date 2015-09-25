@@ -27,8 +27,7 @@ http://www.ogre3d.org/wiki/
 #include <OgreGpuProgramManager.h>
 #include <OgreHighLevelGpuProgramManager.h>
 #include <OgreHighLevelGpuProgram.h>
-
-#include "rapidjson/document.h"
+#include <unordered_map>
 
 using namespace Ogre;
 
@@ -91,7 +90,6 @@ bool PlanetScapeApplication::keyReleased(const OIS::KeyEvent &arg)
 void PlanetScapeApplication::reloadPlanetJson()
 {
    const String filename = "planet1.json";
-   rapidjson::Document json;
    DataStreamPtr data = ResourceGroupManager::getSingletonPtr()->openResource(filename, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
    if (data.isNull()) {
       Ogre::LogManager::getSingletonPtr()->logMessage(String("Couldn't find file  ") + filename);
@@ -99,23 +97,217 @@ void PlanetScapeApplication::reloadPlanetJson()
    }
 
    String jsonString = data->getAsString();
-   json.Parse(jsonString.c_str());
+   mJson.Parse(jsonString.c_str());
 
-   if (json.HasParseError()) {
+   if (mJson.HasParseError()) {
       Ogre::LogManager::getSingletonPtr()->logMessage(String("Parse error discovered in ") + filename);
       //Ogre::LogManager::getSingletonPtr()->logMessage(String("Parse error: ") + json.GetParseError());
       data->close();
       return;
    }
 
-   if (json.HasMember("name")) {
-      Ogre::LogManager::getSingletonPtr()->logMessage(String("PlanetName: ") + json["name"].GetString());
+   if (mJson.HasMember("name")) {
+      Ogre::LogManager::getSingletonPtr()->logMessage(String("PlanetName: ") + mJson["name"].GetString());
    }
 
    //reloadLand(json["land"]);
    //reloadWater(json["water"]);
 
    data->close();
+}
+
+int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
+{
+   int type = 0;
+
+   const std::unordered_map<std::string, int> types ({
+      { "puffy", 1 },
+      { "speckled", 2 },
+      { "turbulence", 3 }
+   });
+
+   if (types.find(val) != types.end()) {
+      return types.at(val);
+   }
+   else {
+      return 0;
+   }
+}
+
+int PlanetScapeApplication::GetBlendTypeFromString(std::string &val)
+{
+   int type = 0;
+
+   const std::unordered_map<std::string, int> types({
+      { "add", 1 },
+      { "multiply", 2 }
+   });
+
+   return types.find(val) == types.end() ? 0 : types.at(val);
+}
+
+void PlanetScapeApplication::SetLandParamsFromJson(GpuProgramParametersSharedPtr params)
+{
+   if (mJson["land"].HasMember("continents")) {
+      params->setNamedConstant("numContinents", mJson["land"]["continents"].GetInt());
+   }
+   else {
+      params->setNamedConstant("numContinents", (int)0);
+   }
+
+   SetNoiseLayerParamsFromJson(params);
+   SetColorTableParamsFromJson(params);
+}
+
+void PlanetScapeApplication::SetNoiseLayerParamsFromJson(GpuProgramParametersSharedPtr params)
+{
+   if (mJson["land"].HasMember("noise_layers")) {
+      const rapidjson::Value& noiseLayers = mJson["land"]["noise_layers"];
+      int numLayers = noiseLayers.Size();
+      params->setNamedConstant("numNoiseLayers", numLayers);
+
+      // this should be a multiple of four because Ogre prefers that
+      const uint maxLayers = 4;
+
+      int noiseLayerTypes[maxLayers];
+      float noiseLayerSeeds[maxLayers];
+      float noiseLayerMinHeights[maxLayers];
+      float noiseLayerMaxHeights[maxLayers];
+      int noiseLayerBlendTypes[maxLayers];
+
+      for (rapidjson::SizeType i = 0; i < numLayers && i < maxLayers; ++i) {
+         if (noiseLayers[i].HasMember("type")) {
+            noiseLayerTypes[i] = GetNoiseTypeFromString(std::string(noiseLayers[i]["type"].GetString()));
+         }
+
+         if (noiseLayers[i].HasMember("seed")) {
+            noiseLayerSeeds[i] = noiseLayers[i]["seed"].GetDouble();
+         }
+
+         if (noiseLayers[i].HasMember("min_height")) {
+            noiseLayerMinHeights[i] = noiseLayers[i]["min_height"].GetDouble();
+         }
+
+         if (noiseLayers[i].HasMember("max_height")) {
+            noiseLayerMaxHeights[i] = noiseLayers[i]["max_height"].GetDouble();
+         }
+
+         if (noiseLayers[i].HasMember("blend")) {
+            noiseLayerBlendTypes[i] = GetBlendTypeFromString(std::string(noiseLayers[i]["blend"].GetString()));
+         }
+      }
+
+      params->setNamedConstant("noiseLayerTypes", noiseLayerTypes, maxLayers / 4);
+      params->setNamedConstant("noiseLayerSeeds", noiseLayerSeeds, maxLayers / 4);
+      params->setNamedConstant("noiseLayerMinHeights", noiseLayerMinHeights, maxLayers / 4);
+      params->setNamedConstant("noiseLayerMaxHeights", noiseLayerMaxHeights, maxLayers / 4);
+      params->setNamedConstant("noiseLayerBlendTypes", noiseLayerBlendTypes, maxLayers / 4);
+   }
+   else {
+      params->setNamedConstant("numNoiseLayers", (int)0);
+   }
+}
+
+void PlanetScapeApplication::SetColorTableParamsFromJson(GpuProgramParametersSharedPtr params)
+{
+   if (mJson["land"].HasMember("color_table")) {
+      const rapidjson::Value& colorTable = mJson["land"]["color_table"];
+      int numEntries = colorTable.Size();
+      params->setNamedConstant("numColorTableEntries", numEntries);
+
+      // this should be a multiple of four because Ogre prefers that
+      const uint maxEntries = 8;
+
+      float colorTableOffsets[maxEntries];
+      float colorTableColors[maxEntries * 3];
+      float colorTableDitherAmounts[maxEntries];
+
+      for (rapidjson::SizeType i = 0; i < numEntries && i < maxEntries; ++i) {
+         if (colorTable[i].HasMember("offset")) {
+            colorTableOffsets[i] = colorTable[i]["offset"].GetDouble();
+         }
+
+         if (colorTable[i].HasMember("color")) {
+            colorTableColors[i * 3 + 0] = colorTable[i]["color"][0].GetDouble();
+            colorTableColors[i * 3 + 1] = colorTable[i]["color"][1].GetDouble();
+            colorTableColors[i * 3 + 2] = colorTable[i]["color"][2].GetDouble();
+         }
+
+         if (colorTable[i].HasMember("dither_amount")) {
+            colorTableDitherAmounts[i] = colorTable[i]["dither_amount"].GetDouble();
+         }
+      }
+
+      params->setNamedConstant("colorTableOffsets", colorTableOffsets, maxEntries / 4);
+      params->setNamedConstant("colorTableColors", colorTableColors, (maxEntries * 3) / 4);
+      params->setNamedConstant("colorTableDitherAmounts", colorTableDitherAmounts, maxEntries / 4);
+   }
+   else {
+      params->setNamedConstant("numColorTableEntries", 0);
+   }
+}
+
+void PlanetScapeApplication::SetWaterParamsFromJson(GpuProgramParametersSharedPtr params)
+{
+   if (mJson["water"].HasMember("level")) {
+      params->setNamedConstant("waterShallowLevel", (float)mJson["water"]["level"].GetDouble());
+
+      // shallow water
+      if (mJson["water"].HasMember("shallow_color")) {
+         Vector3 color = Vector3::ZERO;
+         color.x = (float)mJson["water"]["shallow_color"][0].GetDouble();
+         color.y = (float)mJson["water"]["shallow_color"][1].GetDouble();
+         color.z = (float)mJson["water"]["shallow_color"][2].GetDouble();
+
+         params->setNamedConstant("waterShallowColor", color);
+      }
+      else {
+         params->setNamedConstant("waterShallowColor", Vector3::ZERO);
+      }
+
+      // deep water
+      if (mJson["water"].HasMember("deep_level")) {
+         params->setNamedConstant("waterDeepLevel", (float)mJson["water"]["deep_level"].GetDouble());
+      }
+      else {
+         params->setNamedConstant("waterDeepLevel", (float)0.0);
+      }
+
+      if (mJson["water"].HasMember("deep_color")) {
+         Vector3 color = Vector3::ZERO;
+         color.x = (float)mJson["water"]["deep_color"][0].GetDouble();
+         color.y = (float)mJson["water"]["deep_color"][1].GetDouble();
+         color.z = (float)mJson["water"]["deep_color"][2].GetDouble();
+
+         params->setNamedConstant("waterDeepColor", color);
+      }
+      else {
+         params->setNamedConstant("waterDeepColor", Vector3::ZERO);
+      }
+
+      // specular
+      if (mJson["water"].HasMember("specular_amount")) {
+         params->setNamedConstant("waterSpecularAmount", (float)mJson["water"]["specular_amount"].GetDouble());
+      }
+      else {
+         params->setNamedConstant("waterSpecularAmount", (float)0.0);
+      }
+
+      if (mJson["water"].HasMember("specular_color")) {
+         Vector3 color = Vector3::ZERO;
+         color.x = (float)mJson["water"]["specular_color"][0].GetDouble();
+         color.y = (float)mJson["water"]["specular_color"][1].GetDouble();
+         color.z = (float)mJson["water"]["specular_color"][2].GetDouble();
+
+         params->setNamedConstant("waterSpecularColor", color);
+      }
+      else {
+         params->setNamedConstant("waterSpecularColor", Vector3::UNIT_SCALE);
+      }
+   }
+   else {
+      params->setNamedConstant("waterShallowLevel", (float)0.0);
+   }
 }
 
 void PlanetScapeApplication::reload()
@@ -149,7 +341,6 @@ void PlanetScapeApplication::reload()
          ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
          "glsl",
          GPT_VERTEX_PROGRAM);
-      //gpuProgram->setSource(test_glsl_vp);
       vpProgram->setSourceFile(planetVpFilename);
       vpProgram->load();
    }
@@ -170,12 +361,10 @@ void PlanetScapeApplication::reload()
          ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
          "glsl",
          GPT_FRAGMENT_PROGRAM);
-      //gpuProgram->setSource(test_glsl_fp);
       fpProgram->setSourceFile(planetFpFilename);
 
       // set default fragment program params
       params = fpProgram->getDefaultParameters();
-      params->setNamedConstant("cubemapTexture", (int)0);
       fpProgram->load();
    }
    else {
@@ -183,21 +372,25 @@ void PlanetScapeApplication::reload()
       fpProgram->reload();
    }
 
+   // set fragment program values from json file
+   if (!mJson.IsNull()) {
+      params = fpProgram->getDefaultParameters();
+
+      if (mJson.HasMember("land")) {
+         SetLandParamsFromJson(params);
+      }
+
+      if (mJson.HasMember("water")) {
+         SetWaterParamsFromJson(params);
+      }
+   }
+
    // set the fragment program
    pass->setFragmentProgram(planetFpName);
-
-   if (!pass->getTextureUnitState("CubeMapTexture")) {
-      pass->createTextureUnitState("CubeMapTexture");
-      pass->getTextureUnitState(0)->setTextureName("TestCubemap.dds");
-   }
 
    // set vertex program params
    params = pass->getVertexProgramParameters();
    params->setNamedAutoConstant("worldViewProj", GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
-   
-   //pass->_load();
-
-   //mPlanetMaterial->reload();
 
    mPlaneEntity->setMaterialName("PlanetMaterial");
    mPlanetEntity->setMaterialName(mPlanetMaterial->getName());
