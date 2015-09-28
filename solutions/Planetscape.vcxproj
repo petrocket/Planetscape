@@ -94,6 +94,15 @@
   <ItemGroup>
     <ClInclude Include="..\src\BaseApplication.h" />
     <ClInclude Include="..\src\PlanetScapeApplication.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Planetscape.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\media\materials\planet_fp.glsl" />
+    <None Include="..\media\materials\planet_vp.glsl" />
+    <None Include="..\media\planets\planet1.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -20,6 +20,7 @@ http://www.ogre3d.org/wiki/
 
 #include "BaseApplication.h"
 #include "rapidjson/document.h"
+#include <thread>
 
 //---------------------------------------------------------------------------
 class PlanetScapeApplication : public BaseApplication
@@ -30,7 +31,7 @@ public:
 
 protected:
     virtual void createScene(void);
-
+    virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
     virtual bool keyReleased(const OIS::KeyEvent &arg);
 
     void reload();
@@ -48,6 +49,8 @@ protected:
 private:
    rapidjson::Document mJson;
 
+   Ogre::String findFilePath(const Ogre::String &filename);
+
    void SetLandParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
    void SetNoiseLayerParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
    void SetColorTableParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
@@ -55,6 +58,11 @@ private:
 
    int GetNoiseTypeFromString(std::string &val);
    int GetBlendTypeFromString(std::string &val);
+
+   std::thread mThread;
+   bool mShouldReload;
+   bool mShutDownFileWatcher;
+   void FileWatcherThreadFunc();
 };
 
 //---------------------------------------------------------------------------

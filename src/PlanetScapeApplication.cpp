@@ -32,12 +32,19 @@ http://www.ogre3d.org/wiki/
 using namespace Ogre;
 
 //---------------------------------------------------------------------------
-PlanetScapeApplication::PlanetScapeApplication(void)
+PlanetScapeApplication::PlanetScapeApplication(void) :
+mShutDownFileWatcher(false),
+mShouldReload(false),
+mThread()
 {
 }
 //---------------------------------------------------------------------------
 PlanetScapeApplication::~PlanetScapeApplication(void)
 {
+   mShutDownFileWatcher = true;
+   if (mThread.joinable()) {
+      mThread.join();
+   }
 }
 
 //---------------------------------------------------------------------------
@@ -72,14 +79,101 @@ void PlanetScapeApplication::createScene(void)
       ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
       );
 
+   mPlaneEntity->setMaterialName(mPlanetMaterial->getName());
+   mPlanetEntity->setMaterialName(mPlanetMaterial->getName());
+
    reloadPlanetJson();
    reload();
 
+   mThread = std::thread(&PlanetScapeApplication::FileWatcherThreadFunc, this);
+}
+
+String PlanetScapeApplication::findFilePath(const String &filename)
+{
+   ResourceGroupManager* mgr = ResourceGroupManager::getSingletonPtr();
+   std::string resourceGroup(mgr->findGroupContainingResource(filename));
+   Ogre::FileInfoListPtr fileInfos = mgr->findResourceFileInfo(resourceGroup, filename);
+   FileInfoList::iterator it = fileInfos->begin();
+   if (it != fileInfos->end()) {
+      return it->archive->getName();
+   }
+
+   return "";
+}
+
+void PlanetScapeApplication::FileWatcherThreadFunc() 
+{   
+   const String filename = "planet1.json";
+   String path = findFilePath(filename);
+
+#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+   // monitor directory for change
+   HANDLE hDir = FindFirstChangeNotification(path.c_str(), false, FILE_NOTIFY_CHANGE_LAST_WRITE);
+   if (hDir == INVALID_HANDLE_VALUE) {
+      Ogre::LogManager::getSingletonPtr()->logMessage(String("Watcher received invalid handle"));
+      return;
+   }
+
+   // monitor specific file
+   HANDLE hFile = CreateFile((path + "/" + filename).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+      OPEN_EXISTING, 0, NULL);
+
+   FILETIME creationTime, lastAccessTime, oldWriteTime;
+   BOOL success = GetFileTime(hFile, &creationTime, &lastAccessTime, &oldWriteTime);
+   CloseHandle(hFile);
+   if (!success) {
+      CloseHandle(hDir);
+      return;
+   }
+
+   while (!mShutDownFileWatcher) {
+      DWORD result = WaitForSingleObject(hDir, INFINITE);
+
+      if (mShutDownFileWatcher) {
+         break;
+      }
+
+      if (result == WAIT_OBJECT_0) {
+         // sleep a bit to ignore multiple notifications
+         Sleep(WAIT_TIMEOUT);
+
+         FILETIME lastWriteTime;
+         HANDLE hFile = CreateFile((path + "/" + filename).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+            OPEN_EXISTING, 0, NULL);
+         BOOL success = GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
+         CloseHandle(hFile);
+         if (!success) {
+            break;
+         }
+
+         if (CompareFileTime(&lastWriteTime, &oldWriteTime) != 0) {
+            oldWriteTime = lastWriteTime;
+            mShouldReload = true;
+         }
+
+         FindNextChangeNotification(hDir);
+      }
+   }
+
+   CloseHandle(hDir);
+#endif
+}
+
+bool PlanetScapeApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
+{
+   if (mShouldReload) {
+      mShouldReload = false;
+      reloadPlanetJson();
+      reload();
+   }
+
+   return BaseApplication::frameRenderingQueued(evt);
 }
 
 bool PlanetScapeApplication::keyReleased(const OIS::KeyEvent &arg)
 {
    if (arg.key == OIS::KC_L) {
+      reloadPlanetJson();
       reload();
       return true;
    }
@@ -90,6 +184,7 @@ bool PlanetScapeApplication::keyReleased(const OIS::KeyEvent &arg)
 void PlanetScapeApplication::reloadPlanetJson()
 {
    const String filename = "planet1.json";
+   
    DataStreamPtr data = ResourceGroupManager::getSingletonPtr()->openResource(filename, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
    if (data.isNull()) {
       Ogre::LogManager::getSingletonPtr()->logMessage(String("Couldn't find file  ") + filename);
@@ -110,9 +205,6 @@ void PlanetScapeApplication::reloadPlanetJson()
       Ogre::LogManager::getSingletonPtr()->logMessage(String("PlanetName: ") + mJson["name"].GetString());
    }
 
-   //reloadLand(json["land"]);
-   //reloadWater(json["water"]);
-
    data->close();
 }
 
@@ -121,9 +213,12 @@ int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
    int type = 0;
 
    const std::unordered_map<std::string, int> types ({
-      { "puffy", 1 },
-      { "speckled", 2 },
-      { "turbulence", 3 }
+      { "puffy", 0 },
+      { "speckled", 1 },
+      { "turbulence", 2 },
+      { "ridged", 3 },
+      { "iq", 4 },
+      { "alien", 5 }
    });
 
    if (types.find(val) != types.end()) {
@@ -139,8 +234,8 @@ int PlanetScapeApplication::GetBlendTypeFromString(std::string &val)
    int type = 0;
 
    const std::unordered_map<std::string, int> types({
-      { "add", 1 },
-      { "multiply", 2 }
+      { "add", 0 },
+      { "multiply", 1 }
    });
 
    return types.find(val) == types.end() ? 0 : types.at(val);
@@ -362,9 +457,6 @@ void PlanetScapeApplication::reload()
          "glsl",
          GPT_FRAGMENT_PROGRAM);
       fpProgram->setSourceFile(planetFpFilename);
-
-      // set default fragment program params
-      params = fpProgram->getDefaultParameters();
       fpProgram->load();
    }
    else {
@@ -372,28 +464,30 @@ void PlanetScapeApplication::reload()
       fpProgram->reload();
    }
 
-   // set fragment program values from json file
-   if (!mJson.IsNull()) {
-      params = fpProgram->getDefaultParameters();
+   // set the fragment program
+   pass->setFragmentProgram(planetFpName);
 
-      if (mJson.HasMember("land")) {
-         SetLandParamsFromJson(params);
-      }
+   // set fragment program params
+   if (!fpProgram.isNull()) {
+      params = pass->getFragmentProgramParameters();
 
-      if (mJson.HasMember("water")) {
-         SetWaterParamsFromJson(params);
+      // set fragment program values from json file
+      if (!mJson.IsNull()) {
+         if (mJson.HasMember("land")) {
+            SetLandParamsFromJson(params);
+         }
+
+         if (mJson.HasMember("water")) {
+            SetWaterParamsFromJson(params);
+         }
       }
    }
 
-   // set the fragment program
-   pass->setFragmentProgram(planetFpName);
 
    // set vertex program params
    params = pass->getVertexProgramParameters();
    params->setNamedAutoConstant("worldViewProj", GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
 
-   mPlaneEntity->setMaterialName("PlanetMaterial");
-   mPlanetEntity->setMaterialName(mPlanetMaterial->getName());
 }
 
 

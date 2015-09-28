@@ -7,24 +7,24 @@
 		"noise_layers": [
 			{
 				"type":"puffy",
-				"seed":0,
+				"seed":2,
 				"min_height":0.0,
 				"max_height":1.0,
 				"blend":"add"
 			},
 			{
-				"type":"speckled",
-				"seed":0,
-				"min_height":0.0,
-				"max_height":1.0,
-				"blend":"add"
-			},
-			{
-				"type":"turbulence",
-				"seed":0,
+				"type":"ridged",
+				"seed":1,
 				"min_height":0.0,
 				"max_height":1.0,
 				"blend":"multiply"
+			},
+			{
+				"type":"iq",
+				"seed":1,
+				"min_height":0.0,
+				"max_height":1.0,
+				"blend":"add"
 			}
 		],
 		"color_table": [
