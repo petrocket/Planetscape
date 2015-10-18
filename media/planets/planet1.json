@@ -29,8 +29,33 @@
 		],
 		"color_table": [
 			{
+				"name":"ocean bottom",
 				"offset":0.0,
 				"color":[0.0,0.0,0.0],
+				"dither_amount":0.0
+			},
+			{
+				"name":"beach",
+				"offset":0.29,
+				"color":[0.6,0.6,0.5],
+				"dither_amount":0.0
+			},
+			{
+				"name":"forest",
+				"offset":0.33,
+				"color":[0.0,0.2,0.1],
+				"dither_amount":0.0
+			},
+			{
+				"name":"forest thin",
+				"offset":0.45,
+				"color":[0.1,0.2,0.1],
+				"dither_amount":0.0
+			},
+			{
+				"name":"snow",
+				"offset":0.5,
+				"color":[0.7,0.75,0.8],
 				"dither_amount":0.0
 			},
 			{
@@ -49,9 +74,9 @@
 
 	"water": {
 		"level":0.3,
-		"deep_level":0.2,
-		"shallow_color":[0.6,0.7,0.9],
-		"deep_color":[0.0,0.05,0.2],
+		"deep_level":0.25,
+		"shallow_color":[0.3,0.51,0.5],
+		"deep_color":[0.0,0.05,0.18],
 		"specular_amount":0.2,
 		"specular_color":[1.0,1.0,1.0]
 	},

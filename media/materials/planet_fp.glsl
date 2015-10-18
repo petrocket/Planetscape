@@ -25,7 +25,7 @@ uniform int numNoiseLayers;
 // num noise layers actually used
 
 uniform float colorTableOffsets[8];
-uniform float colorTableColors[8 * 3];
+uniform float colorTableColors[24];
 uniform float colorTableDitherAmounts[8];
 uniform int numColorTableEntries;
 // num color tables entries used
@@ -454,22 +454,41 @@ void main( void )
     float height = 0.0;
     float scale = 0.0;
     for( int i = 0; i < numNoiseLayers && i < MAX_NOISE_LAYERS; i++) {
-        if( noiseLayerBlendTypes[i] == BLEND_TYPE_MUL) {
-            // BLEND_TYPE_MUL
+		if( noiseLayerBlendTypes[i] == BLEND_TYPE_MUL) {
+			// BLEND_TYPE_MUL
 			height *= heightForNoise(noiseLayerTypes[i], noiseLayerSeeds[i]);
-        }
+		}
 		else {
-            // BLEND_TYPE_ADD default
+			// BLEND_TYPE_ADD default
 			height += heightForNoise(noiseLayerTypes[i], noiseLayerSeeds[i]);
-            scale += 1.0;
-        }
+			scale += 1.0;
+		}
+    }
+
+    // keep height in range 0 .. 1
+    height = height / scale;
+
+	vec3 color = vec3(height,height,height);
+	if (height < waterDeepLevel) {
+		color = waterDeepColor;
 	}
-	
-	// keep height in range 0 .. 1
-	height = height / scale;
+	else if (height < waterShallowLevel) {
+		color = mix(waterShallowColor, waterDeepColor, (waterShallowLevel - height) / (waterShallowLevel - waterDeepLevel));
+	}
+	else {
+		for (int i = 1; i < numColorTableEntries; i++) {
+			if(height > colorTableOffsets[i - 1] && height <= colorTableOffsets[i]) {
+				vec3 current = vec3(colorTableColors[i * 3], colorTableColors[i * 3 + 1], colorTableColors[i * 3 + 2]);
+				vec3 prev = vec3(colorTableColors[(i - 1) * 3], colorTableColors[(i - 1) * 3 + 1], colorTableColors[(i - 1) * 3 + 2]);
+				color = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
+			}
+		}
+	}
+    
 	//height = heightForNoise(NOISE_TYPE_RIDGED, 0.0);
 	//height = noiseLayerTypes[0];
-    gl_FragColor = vec4(height,height,height,1.0);
+    gl_FragColor.rgb = color;
+    gl_FragColor.a = 1.0;
 }
 
 
