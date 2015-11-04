@@ -26,6 +26,8 @@ uniform int numNoiseLayers;
 
 uniform float equator_offset;
 uniform float pole_size;
+uniform float pole_hardness;
+uniform float pole_noise_amount;
 uniform float colorTableOffsets[8];
 uniform float equatorColorTableColors[24];
 uniform float poleColorTableColors[24];
@@ -37,6 +39,7 @@ uniform float waterShallowLevel;
 uniform vec3 waterShallowColor;
 uniform float waterDeepLevel;
 uniform vec3 waterDeepColor;
+uniform vec3 waterFrozenColor;
 uniform float waterSpecularAmount;
 uniform vec3 waterSpecularColor;
 
@@ -469,32 +472,51 @@ void main( void )
     // keep height in range 0 .. 1
     height = height / scale;
 
+	float latitudeRandomness = outUV.t + (max(0.0,heightForNoise(NOISE_TYPE_IQ, 3.5)) * pole_noise_amount) - pole_noise_amount * 0.5;
+	float latitude = abs((latitudeRandomness + equator_offset * 0.5)* 2.0 * pole_hardness - pole_hardness) - (1.0 - pole_size * 2.0) * pole_hardness;
+	float cold = max(0.0,min(1.0,(latitude + max(0.0,height))));
+
 	vec3 color = vec3(height,height,height);
 	if (height < waterDeepLevel) {
-		color = waterDeepColor;
+		color = mix(waterDeepColor, waterFrozenColor, cold);
 	}
 	else if (height < waterShallowLevel) {
 		color = mix(waterShallowColor, waterDeepColor, (waterShallowLevel - height) / (waterShallowLevel - waterDeepLevel));
+		color = mix(color, waterFrozenColor, cold);
 	}
 	else {
+		vec3 equatorColor = vec3(height,height,height);
+		vec3 poleColor = vec3(height,height,height);
 		for (int i = 1; i < numColorTableEntries; i++) {
 			if(height > colorTableOffsets[i - 1] && height <= colorTableOffsets[i]) {
 				vec3 current = vec3(equatorColorTableColors[i * 3], equatorColorTableColors[i * 3 + 1], equatorColorTableColors[i * 3 + 2]);
 				vec3 prev = vec3(equatorColorTableColors[(i - 1) * 3], equatorColorTableColors[(i - 1) * 3 + 1], equatorColorTableColors[(i - 1) * 3 + 2]);
-				color = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
+				equatorColor = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
+
+				current = vec3(poleColorTableColors[i * 3], poleColorTableColors[i * 3 + 1], poleColorTableColors[i * 3 + 2]);
+				prev = vec3(poleColorTableColors[(i - 1) * 3], poleColorTableColors[(i - 1) * 3 + 1], poleColorTableColors[(i - 1) * 3 + 2]);
+				poleColor = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
 			}
 		}
+
+		//color = mix(vec3(1.0,0.0,0.0), vec3(0.0,0.0,1.0), cold);
+		color = mix(equatorColor, poleColor, cold);
+		//color = equatorColor;
 	}
     
 	//vec3 vertexPosNormalized = normalize(vertexPos);
 	//float latitude = abs(dot(vertexPosNormalized, vec3(0.0,1.0,0.0)));
-	float latitude = abs((outUV.t + equator_offset * 0.5)* 2.0 - 1.0) - (1.0 - pole_size * 2.0);
-	//color.r = abs(latitude * 2.0 - 1.0);
-	float cold = min(1.0,(latitude + height ));
 	//float cold = min(1.0,height);
-	color.r = 1.0 - cold;
-	color.g = 0.0;
-	color.b = cold;
+
+	// lattitude
+	//color.r = latitude;
+	//color.g = 0.0;
+	//color.b = 0.0;
+
+	// heat map
+	//color.r = 1.0 - cold;
+	//color.g = 0.0;
+	//color.b = cold;
 
 	//height = heightForNoise(NOISE_TYPE_RIDGED, 0.0);
 	//height = noiseLayerTypes[0];

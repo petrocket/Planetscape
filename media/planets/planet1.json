@@ -28,41 +28,43 @@
 			}
 		],
 		"equator_offset" : 0.0,
-		"pole_size" : 0.3,
+		"pole_size" : 0.22,
+		"pole_noise_amount" : 0.5,
+		"pole_hardness" : 3.0,
 		"color_table": [
 			{
 				"name":"ocean bottom",
 				"offset":0.0,
 				"equator_color":[0.0,0.0,0.0],
-				"pole_color":[0.0,0.0,0.0],
+				"pole_color":[0.6,0.6,0.6],
 				"dither_amount":0.0
 			},
 			{
 				"name":"beach",
 				"offset":0.29,
 				"equator_color":[0.5,0.5,0.45],
-				"pole_color":[0.3,0.3,0.3],
+				"pole_color":[0.85,0.85,0.9],
 				"dither_amount":0.0
 			},
 			{
 				"name":"forest",
 				"offset":0.33,
 				"equator_color":[0.1,0.2,0.1],
-				"pole_color":[0.1,0.2,0.1],
+				"pole_color":[1.0,1.0,1.0],
 				"dither_amount":0.0
 			},
 			{
 				"name":"forest thin",
 				"offset":0.45,
 				"equator_color":[0.1,0.2,0.1],
-				"pole_color":[0.1,0.2,0.1],
+				"pole_color":[1.0,1.0,1.0],
 				"dither_amount":0.0
 			},
 			{
 				"name":"snow",
 				"offset":0.5,
 				"equator_color":[0.7,0.75,0.8],
-				"pole_color":[0.7,0.75,0.8],
+				"pole_color":[1.0,1.0,1.0],
 				"dither_amount":0.0
 			},
 			{
@@ -86,6 +88,7 @@
 		"deep_level":0.25,
 		"shallow_color":[0.3,0.51,0.5],
 		"deep_color":[0.0,0.05,0.18],
+		"frozen_color":[1.0,1.0,1.0],
 		"specular_amount":0.2,
 		"specular_color":[1.0,1.0,1.0]
 	},

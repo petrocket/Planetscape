@@ -268,6 +268,20 @@ void PlanetScapeApplication::SetLandParamsFromJson(GpuProgramParametersSharedPtr
       params->setNamedConstant("pole_size", 0.f);
    }
 
+   if (mJson["land"].HasMember("pole_noise_amount")) {
+      params->setNamedConstant("pole_noise_amount", (float)mJson["land"]["pole_noise_amount"].GetDouble());
+   }
+   else {
+      params->setNamedConstant("pole_noise_amount", 0.f);
+   }
+
+   if (mJson["land"].HasMember("pole_hardness")) {
+      params->setNamedConstant("pole_hardness", (float)mJson["land"]["pole_hardness"].GetDouble());
+   }
+   else {
+      params->setNamedConstant("pole_hardness", 0.f);
+   }
+
    SetNoiseLayerParamsFromJson(params);
    SetColorTableParamsFromJson(params);
 }
@@ -404,6 +418,18 @@ void PlanetScapeApplication::SetWaterParamsFromJson(GpuProgramParametersSharedPt
       }
       else {
          params->setNamedConstant("waterDeepColor", Vector3::ZERO);
+      }
+
+      if (mJson["water"].HasMember("frozen_color")) {
+         Vector3 color = Vector3::ZERO;
+         color.x = (float)mJson["water"]["frozen_color"][0].GetDouble();
+         color.y = (float)mJson["water"]["frozen_color"][1].GetDouble();
+         color.z = (float)mJson["water"]["frozen_color"][2].GetDouble();
+
+         params->setNamedConstant("waterFrozenColor", color);
+      }
+      else {
+         params->setNamedConstant("waterFrozenColor", Vector3::ZERO);
       }
 
       // specular
