@@ -126,8 +126,12 @@ void PlanetScapeApplication::FileWatcherThreadFunc()
       return;
    }
 
+   static const DWORD timeoutMS = 1000;
+
    while (!mShutDownFileWatcher) {
-      DWORD result = WaitForSingleObject(hDir, INFINITE);
+
+      // don't use INFINITE, we need to periodically check if the app is shutting down
+      DWORD result = WaitForSingleObject(hDir, timeoutMS);
 
       if (mShutDownFileWatcher) {
          break;
@@ -250,6 +254,20 @@ void PlanetScapeApplication::SetLandParamsFromJson(GpuProgramParametersSharedPtr
       params->setNamedConstant("numContinents", (int)0);
    }
 
+   if (mJson["land"].HasMember("equator_offset")) {
+      params->setNamedConstant("equator_offset", (float)mJson["land"]["equator_offset"].GetDouble());
+   }
+   else {
+      params->setNamedConstant("equator_offset", 0.f);
+   }
+
+   if (mJson["land"].HasMember("pole_size")) {
+      params->setNamedConstant("pole_size", (float)mJson["land"]["pole_size"].GetDouble());
+   }
+   else {
+      params->setNamedConstant("pole_size", 0.f);
+   }
+
    SetNoiseLayerParamsFromJson(params);
    SetColorTableParamsFromJson(params);
 }
@@ -314,7 +332,8 @@ void PlanetScapeApplication::SetColorTableParamsFromJson(GpuProgramParametersSha
       const uint maxEntries = 8;
 
       float colorTableOffsets[maxEntries];
-      float colorTableColors[maxEntries * 3];
+      float poleColorTableColors[maxEntries * 3];
+      float equatorColorTableColors[maxEntries * 3];
       float colorTableDitherAmounts[maxEntries];
 
       for (rapidjson::SizeType i = 0; i < numEntries && i < maxEntries; ++i) {
@@ -322,10 +341,16 @@ void PlanetScapeApplication::SetColorTableParamsFromJson(GpuProgramParametersSha
             colorTableOffsets[i] = colorTable[i]["offset"].GetDouble();
          }
 
-         if (colorTable[i].HasMember("color")) {
-            colorTableColors[i * 3 + 0] = colorTable[i]["color"][0].GetDouble();
-            colorTableColors[i * 3 + 1] = colorTable[i]["color"][1].GetDouble();
-            colorTableColors[i * 3 + 2] = colorTable[i]["color"][2].GetDouble();
+         if (colorTable[i].HasMember("equator_color")) {
+            equatorColorTableColors[i * 3 + 0] = colorTable[i]["equator_color"][0].GetDouble();
+            equatorColorTableColors[i * 3 + 1] = colorTable[i]["equator_color"][1].GetDouble();
+            equatorColorTableColors[i * 3 + 2] = colorTable[i]["equator_color"][2].GetDouble();
+         }
+
+         if (colorTable[i].HasMember("pole_color")) {
+            poleColorTableColors[i * 3 + 0] = colorTable[i]["pole_color"][0].GetDouble();
+            poleColorTableColors[i * 3 + 1] = colorTable[i]["pole_color"][1].GetDouble();
+            poleColorTableColors[i * 3 + 2] = colorTable[i]["pole_color"][2].GetDouble();
          }
 
          if (colorTable[i].HasMember("dither_amount")) {
@@ -334,7 +359,8 @@ void PlanetScapeApplication::SetColorTableParamsFromJson(GpuProgramParametersSha
       }
 
       params->setNamedConstant("colorTableOffsets", colorTableOffsets, maxEntries / 4);
-      params->setNamedConstant("colorTableColors", colorTableColors, (maxEntries * 3) / 4);
+      params->setNamedConstant("equatorColorTableColors", equatorColorTableColors, (maxEntries * 3) / 4);
+      params->setNamedConstant("poleColorTableColors", poleColorTableColors, (maxEntries * 3) / 4);
       params->setNamedConstant("colorTableDitherAmounts", colorTableDitherAmounts, maxEntries / 4);
    }
    else {

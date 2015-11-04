@@ -24,14 +24,15 @@ uniform int noiseLayerBlendTypes[MAX_NOISE_LAYERS];
 uniform int numNoiseLayers;
 // num noise layers actually used
 
+uniform float equator_offset;
+uniform float pole_size;
 uniform float colorTableOffsets[8];
-uniform float colorTableColors[24];
+uniform float equatorColorTableColors[24];
+uniform float poleColorTableColors[24];
 uniform float colorTableDitherAmounts[8];
 uniform int numColorTableEntries;
 // num color tables entries used
 
-// polar caps (easy out)
-uniform float polarCap;
 uniform float waterShallowLevel;
 uniform vec3 waterShallowColor;
 uniform float waterDeepLevel;
@@ -478,13 +479,23 @@ void main( void )
 	else {
 		for (int i = 1; i < numColorTableEntries; i++) {
 			if(height > colorTableOffsets[i - 1] && height <= colorTableOffsets[i]) {
-				vec3 current = vec3(colorTableColors[i * 3], colorTableColors[i * 3 + 1], colorTableColors[i * 3 + 2]);
-				vec3 prev = vec3(colorTableColors[(i - 1) * 3], colorTableColors[(i - 1) * 3 + 1], colorTableColors[(i - 1) * 3 + 2]);
+				vec3 current = vec3(equatorColorTableColors[i * 3], equatorColorTableColors[i * 3 + 1], equatorColorTableColors[i * 3 + 2]);
+				vec3 prev = vec3(equatorColorTableColors[(i - 1) * 3], equatorColorTableColors[(i - 1) * 3 + 1], equatorColorTableColors[(i - 1) * 3 + 2]);
 				color = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
 			}
 		}
 	}
     
+	//vec3 vertexPosNormalized = normalize(vertexPos);
+	//float latitude = abs(dot(vertexPosNormalized, vec3(0.0,1.0,0.0)));
+	float latitude = abs((outUV.t + equator_offset * 0.5)* 2.0 - 1.0) - (1.0 - pole_size * 2.0);
+	//color.r = abs(latitude * 2.0 - 1.0);
+	float cold = min(1.0,(latitude + height ));
+	//float cold = min(1.0,height);
+	color.r = 1.0 - cold;
+	color.g = 0.0;
+	color.b = cold;
+
 	//height = heightForNoise(NOISE_TYPE_RIDGED, 0.0);
 	//height = noiseLayerTypes[0];
     gl_FragColor.rgb = color;

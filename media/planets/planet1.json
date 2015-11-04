@@ -7,7 +7,7 @@
 		"noise_layers": [
 			{
 				"type":"puffy",
-				"seed":2,
+				"seed":1,
 				"min_height":0.0,
 				"max_height":1.0,
 				"blend":"add"
@@ -27,40 +27,49 @@
 				"blend":"add"
 			}
 		],
+		"equator_offset" : 0.0,
+		"pole_size" : 0.3,
 		"color_table": [
 			{
 				"name":"ocean bottom",
 				"offset":0.0,
-				"color":[0.0,0.0,0.0],
+				"equator_color":[0.0,0.0,0.0],
+				"pole_color":[0.0,0.0,0.0],
 				"dither_amount":0.0
 			},
 			{
 				"name":"beach",
 				"offset":0.29,
-				"color":[0.6,0.6,0.5],
+				"equator_color":[0.5,0.5,0.45],
+				"pole_color":[0.3,0.3,0.3],
 				"dither_amount":0.0
 			},
 			{
 				"name":"forest",
 				"offset":0.33,
-				"color":[0.0,0.2,0.1],
+				"equator_color":[0.1,0.2,0.1],
+				"pole_color":[0.1,0.2,0.1],
 				"dither_amount":0.0
 			},
 			{
 				"name":"forest thin",
 				"offset":0.45,
-				"color":[0.1,0.2,0.1],
+				"equator_color":[0.1,0.2,0.1],
+				"pole_color":[0.1,0.2,0.1],
 				"dither_amount":0.0
 			},
 			{
 				"name":"snow",
 				"offset":0.5,
-				"color":[0.7,0.75,0.8],
+				"equator_color":[0.7,0.75,0.8],
+				"pole_color":[0.7,0.75,0.8],
 				"dither_amount":0.0
 			},
 			{
 				"offset":1.0,
 				"color":[1.0,1.0,1.0],
+				"equator_color":[1.0,1.0,1.0],
+				"pole_color":[1.0,1.0,1.0],
 				"dither_amount":0.0
 			}
 		]
