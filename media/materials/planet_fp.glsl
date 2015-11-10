@@ -1,3 +1,11 @@
+uniform vec3 cameraPositionObjectSpace;
+uniform vec4 lightPositionObjectSpace; 
+uniform vec3 lightColor;
+uniform vec3 ambientColor;
+
+varying vec3 vertexPos;
+varying vec2 outUV;
+
 // continents
 uniform int numContinents;
 uniform float continentSeed;
@@ -16,6 +24,7 @@ uniform float islandSeed;
 #define NOISE_TYPE_RIDGED 3
 #define NOISE_TYPE_IQ 4
 #define NOISE_TYPE_ALIEN 5
+#define NOISE_TYPE_MARBLE 6
 uniform int noiseLayerTypes[MAX_NOISE_LAYERS];
 uniform float noiseLayerSeeds[MAX_NOISE_LAYERS];
 uniform float noiseLayerMinHeights[MAX_NOISE_LAYERS];
@@ -425,8 +434,16 @@ float jordanTurbulence(vec3 p, float seed, int octaves, float lacunarity = 2.35,
 	return sum;
 }
 
-varying vec3 vertexPos;
-varying vec2 outUV;
+float marble(vec3 p, float seed, int octaves)
+{
+	float xPeriod = 6.0;
+	float yPeriod = 8.0;
+	float turbulencePower = 3.0;
+	float turbulenceSize = 4.0;
+	float xyValue = outUV.x * xPeriod + outUV.y * yPeriod + turbulencePower * turbulence(p * turbulenceSize, seed, octaves);
+	float sinValue = abs(sin(xyValue));
+	return sinValue;	
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 float heightForNoise(int noiseType, float seed) 
@@ -449,8 +466,19 @@ float heightForNoise(int noiseType, float seed)
 	else if(noiseType == NOISE_TYPE_ALIEN) {
         return alienTurbulence(vertexPos, seed, 8);
     }
+	else if(noiseType == NOISE_TYPE_MARBLE) {
+        return marble(vertexPos, seed, 8);
+    }
 	return 0.0;
 }
+
+vec4 lit(float NdotL, float NdotH, float m) {
+    float amb = 1.0;
+    float diffuse = max(0.0, NdotL);
+    float specular = step(0.0, NdotL) * max(NdotH * m, 0.0);
+    return vec4(amb, diffuse, specular, 1.0);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void main( void )
@@ -477,25 +505,42 @@ void main( void )
 	float cold = max(0.0,min(1.0,(latitude + max(0.0,height))));
 
 	vec3 color = vec3(height,height,height);
+
+	vec3 normal = normalize(vertexPos);
+    vec3 cameraDir = normalize(cameraPositionObjectSpace - vertexPos);
+    vec3 lightDir = normalize(lightPositionObjectSpace.xyz - (vertexPos * lightPositionObjectSpace.w));
+	float halfDir = normalize(lightDir + cameraDir);
+	float specularCoefficient = 0.0; 
+	float litAmount = max(0.0,dot(normal,lightDir));
+	if(litAmount > 0.0) {
+		specularCoefficient = pow(max(0.0, dot(reflect(-lightDir,normal), cameraDir)), 16) * waterSpecularAmount; 
+	}
+
 	if (height < waterDeepLevel) {
 		color = mix(waterDeepColor, waterFrozenColor, cold);
+		color += specularCoefficient * waterSpecularColor;
 	}
 	else if (height < waterShallowLevel) {
 		color = mix(waterShallowColor, waterDeepColor, (waterShallowLevel - height) / (waterShallowLevel - waterDeepLevel));
-		color = mix(color, waterFrozenColor, cold);
+		color += specularCoefficient * waterSpecularColor * 0.8;
+		color = mix(color, waterFrozenColor + specularCoefficient * waterSpecularColor * 0.1 , cold);
 	}
 	else {
 		vec3 equatorColor = vec3(height,height,height);
 		vec3 poleColor = vec3(height,height,height);
+		float mixAmount = marble(vertexPos, 0, 10);
+
 		for (int i = 1; i < numColorTableEntries; i++) {
 			if(height > colorTableOffsets[i - 1] && height <= colorTableOffsets[i]) {
 				vec3 current = vec3(equatorColorTableColors[i * 3], equatorColorTableColors[i * 3 + 1], equatorColorTableColors[i * 3 + 2]);
 				vec3 prev = vec3(equatorColorTableColors[(i - 1) * 3], equatorColorTableColors[(i - 1) * 3 + 1], equatorColorTableColors[(i - 1) * 3 + 2]);
 				equatorColor = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
+				equatorColor *= 1.0 - mixAmount * 0.4;
 
 				current = vec3(poleColorTableColors[i * 3], poleColorTableColors[i * 3 + 1], poleColorTableColors[i * 3 + 2]);
 				prev = vec3(poleColorTableColors[(i - 1) * 3], poleColorTableColors[(i - 1) * 3 + 1], poleColorTableColors[(i - 1) * 3 + 2]);
 				poleColor = mix(current, prev, (colorTableOffsets[i] - height) / (colorTableOffsets[i] - colorTableOffsets[i - 1]));
+				poleColor *= 1.0 - mixAmount * 0.02;
 			}
 		}
 
@@ -520,6 +565,12 @@ void main( void )
 
 	//height = heightForNoise(NOISE_TYPE_RIDGED, 0.0);
 	//height = noiseLayerTypes[0];
+    //gl_FragColor.rgb = (lightColor * color * litAmount) + (1.0 - litAmount) * vec3(0.06,0.07,0.15) * color;
+	//height = marble(vertexPos, 0, 8);
+	//color = vec3(height, height, height);
+	//color = mix(waterDeepColor, waterFrozenColor, cold);
+	//color += specularCoefficient * waterSpecularColor;
+    color = (lightColor * color * litAmount) + (1.0 - litAmount) * vec3(0.06,0.07,0.15) * color;
     gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
 }

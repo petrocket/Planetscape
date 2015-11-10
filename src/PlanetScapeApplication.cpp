@@ -51,9 +51,12 @@ PlanetScapeApplication::~PlanetScapeApplication(void)
 void PlanetScapeApplication::createScene(void)
 {
    Light *sun = mSceneMgr->createLight("Sun");
+   sun->setDiffuseColour(ColourValue(1.f, 1.f, 1.f, 1.f));
+
    SceneNode *sunNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("SunNode");
    sunNode->setPosition(300, 300, 300);
    sunNode->attachObject(sun);
+   mSceneMgr->setAmbientLight(ColourValue(0.1, 0.1, 0.12, 1.f));
 
    // PLANET GROUND
    mPlanetEntity = mSceneMgr->createEntity("Planet", SceneManager::PT_SPHERE);
@@ -522,6 +525,11 @@ void PlanetScapeApplication::reload()
    // set fragment program params
    if (!fpProgram.isNull()) {
       params = pass->getFragmentProgramParameters();
+
+      params->setNamedAutoConstant("lightPositionObjectSpace", GpuProgramParameters::ACT_LIGHT_POSITION_OBJECT_SPACE);
+      params->setNamedAutoConstant("cameraPositionObjectSpace", GpuProgramParameters::ACT_CAMERA_POSITION_OBJECT_SPACE);
+      params->setNamedAutoConstant("lightColor", GpuProgramParameters::ACT_LIGHT_DIFFUSE_COLOUR);
+      params->setNamedAutoConstant("ambientColor", GpuProgramParameters::ACT_AMBIENT_LIGHT_COLOUR);
 
       // set fragment program values from json file
       if (!mJson.IsNull()) {
