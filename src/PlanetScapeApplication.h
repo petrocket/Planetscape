@@ -18,30 +18,33 @@ http://www.ogre3d.org/wiki/
 #ifndef __PlanetScapeApplication_h_
 #define __PlanetScapeApplication_h_
 
-#include "BaseApplication.h"
+#include <OgreApplicationContext.h>
 #include "rapidjson/document.h"
 #include <thread>
 
 //---------------------------------------------------------------------------
-class PlanetScapeApplication : public BaseApplication
+class PlanetScapeApplication : public OgreBites::ApplicationContext, public OgreBites::InputListener
 {
 public:
     PlanetScapeApplication(void);
     virtual ~PlanetScapeApplication(void);
 
 protected:
-    virtual void createScene(void);
+    virtual void setup(void);
     virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
-    virtual bool keyReleased(const OIS::KeyEvent &arg);
+    virtual bool keyReleased(const OgreBites::KeyboardEvent &arg);
 
     void reload();
     void reloadShader();
     void reloadPlanetJson();
 
+    Ogre::Camera*               mCamera;
+    Ogre::SceneManager*         mSceneMgr;
+
     Ogre::Entity *mPlanetEntity;
     Ogre::Entity *mPlaneEntity;
 
-    Ogre::MaterialPtr mPlanetMaterial;
+    Ogre::Material* mPlanetMaterial;
 
     Ogre::SceneNode *mPlanetSceneNode;
     Ogre::SceneNode *mPlaneSceneNode;
