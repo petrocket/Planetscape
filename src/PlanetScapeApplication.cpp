@@ -28,6 +28,7 @@ http://www.ogre3d.org/wiki/
 #include <OgreHighLevelGpuProgramManager.h>
 #include <OgreHighLevelGpuProgram.h>
 #include <unordered_map>
+#include <iostream>
 
 using namespace Ogre;
 
@@ -215,7 +216,7 @@ void PlanetScapeApplication::reloadPlanetJson()
    data->close();
 }
 
-int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
+int PlanetScapeApplication::GetNoiseTypeFromString(const std::string &val)
 {
    int type = 0;
 
@@ -236,7 +237,7 @@ int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
    }
 }
 
-int PlanetScapeApplication::GetBlendTypeFromString(std::string &val)
+int PlanetScapeApplication::GetBlendTypeFromString(const std::string &val)
 {
    int type = 0;
 

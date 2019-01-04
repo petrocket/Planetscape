@@ -4,7 +4,7 @@ project(Planetscape)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-find_package(OGRE REQUIRED)
+find_package(OGRE 1.10 REQUIRED)
 find_package(OIS REQUIRED)
 
 add_executable(Planetscape src/BaseApplication.cpp src/PlanetScapeApplication.cpp)

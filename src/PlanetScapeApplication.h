@@ -56,8 +56,8 @@ private:
    void SetColorTableParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
    void SetWaterParamsFromJson(Ogre::GpuProgramParametersSharedPtr params);
 
-   int GetNoiseTypeFromString(std::string &val);
-   int GetBlendTypeFromString(std::string &val);
+   int GetNoiseTypeFromString(const std::string &val);
+   int GetBlendTypeFromString(const std::string &val);
 
    std::thread mThread;
    bool mShouldReload;
