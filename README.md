@@ -1,6 +1,8 @@
 # PlanetScape
 Makin' the planets
 
+![](screenshot.jpg)
+
 The general idea will be to implement a bunch o noise functions that you can layer to make the planet the way you want and export a latlon or cubemap.
 
 TODO
