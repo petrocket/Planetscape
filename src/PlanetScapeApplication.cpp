@@ -16,23 +16,16 @@ http://www.ogre3d.org/wiki/
 */
 
 #include "PlanetScapeApplication.h"
-#include <OgreTextureManager.h>
-#include <OgreMaterialManager.h>
-#include <OgreMaterial.h>
-#include <OgreTechnique.h>
-#include <OgreHardwarePixelBuffer.h>
-#include <OgreHardwareBuffer.h>
-#include <OgreMath.h>
-#include <OgreGpuProgram.h>
-#include <OgreGpuProgramManager.h>
-#include <OgreHighLevelGpuProgramManager.h>
-#include <OgreHighLevelGpuProgram.h>
+#include <Ogre.h>
+#include <OgreCameraMan.h>
 #include <unordered_map>
+#include <iostream>
 
 using namespace Ogre;
 
 //---------------------------------------------------------------------------
 PlanetScapeApplication::PlanetScapeApplication(void) :
+OgreBites::ApplicationContext("Planetscape"),
 mShutDownFileWatcher(false),
 mShouldReload(false),
 mThread()
@@ -48,8 +41,31 @@ PlanetScapeApplication::~PlanetScapeApplication(void)
 }
 
 //---------------------------------------------------------------------------
-void PlanetScapeApplication::createScene(void)
+void PlanetScapeApplication::setup()
 {
+   OgreBites::ApplicationContext::setup();
+
+   mSceneMgr = getRoot()->createSceneManager();
+   mCamera = mSceneMgr->createCamera("PlayerCam");
+   mCamera->setNearClipDistance(5);
+   mCamera->setAutoAspectRatio(true);
+
+   auto camNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+   camNode->attachObject(mCamera);
+   // Position it at 500 in Z direction
+   camNode->setPosition(Ogre::Vector3(0,0,80));
+   // Look back along -Z
+   camNode->lookAt(Ogre::Vector3(0,0,-300), Ogre::Node::TS_WORLD);
+
+   auto camMan = new OgreBites::CameraMan(camNode);
+   camMan->setStyle(OgreBites::CS_ORBIT);
+   addInputListener(camMan);
+   addInputListener(this);
+
+   // Create one viewport, entire window
+   Ogre::Viewport* vp = getRenderWindow()->addViewport(mCamera);
+   vp->setBackgroundColour(Ogre::ColourValue(0,0,0));
+
    Light *sun = mSceneMgr->createLight("Sun");
    sun->setDiffuseColour(ColourValue(1.f, 1.f, 1.f, 1.f));
 
@@ -80,7 +96,7 @@ void PlanetScapeApplication::createScene(void)
    mPlanetMaterial = MaterialManager::getSingleton().create(
       "PlanetMaterial",
       ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
-      );
+      ).get();
 
    mPlaneEntity->setMaterialName(mPlanetMaterial->getName());
    mPlanetEntity->setMaterialName(mPlanetMaterial->getName());
@@ -174,18 +190,22 @@ bool PlanetScapeApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
       reload();
    }
 
-   return BaseApplication::frameRenderingQueued(evt);
+   return OgreBites::ApplicationContext::frameRenderingQueued(evt);
 }
 
-bool PlanetScapeApplication::keyReleased(const OIS::KeyEvent &arg)
+bool PlanetScapeApplication::keyReleased(const OgreBites::KeyboardEvent& arg)
 {
-   if (arg.key == OIS::KC_L) {
+   switch (arg.keysym.sym) {
+   case 'l':
       reloadPlanetJson();
       reload();
-      return true;
+      break;
+   case 27:
+      getRoot()->queueEndRendering();
+      break;
    }
 
-   return BaseApplication::keyReleased(arg);
+   return true;
 }
 
 void PlanetScapeApplication::reloadPlanetJson()
@@ -215,7 +235,7 @@ void PlanetScapeApplication::reloadPlanetJson()
    data->close();
 }
 
-int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
+int PlanetScapeApplication::GetNoiseTypeFromString(const std::string &val)
 {
    int type = 0;
 
@@ -236,7 +256,7 @@ int PlanetScapeApplication::GetNoiseTypeFromString(std::string &val)
    }
 }
 
-int PlanetScapeApplication::GetBlendTypeFromString(std::string &val)
+int PlanetScapeApplication::GetBlendTypeFromString(const std::string &val)
 {
    int type = 0;
 
@@ -572,7 +592,9 @@ extern "C" {
         PlanetScapeApplication app;
 
         try {
-            app.go();
+            app.initApp();
+            app.getRoot()->startRendering();
+            app.closeApp();
         } catch(Ogre::Exception& e)  {
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
             MessageBox(NULL, e.getFullDescription().c_str(), "An exception has occurred!", MB_OK | MB_ICONERROR | MB_TASKMODAL);
